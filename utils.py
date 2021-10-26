@@ -1,4 +1,5 @@
 import pandas as pd
+import re 
 
 def read_file(arquivo):
     with open(arquivo, 'r') as file:
@@ -19,11 +20,25 @@ def carga_to_df(texto):
     gravando_rev = False
     for line in texto: 
         line_split = line.split()
+        aux_list = []
         if 'MWmed' in line_split:
             headers = line_split.copy()
-        
+            i_pos = 0
+            i_mwmed = 1
+            for header in headers:
+                if 'MWmed' in header:
+                    headers[i_pos] = headers[i_pos] + str(i_mwmed)
+                    i_mwmed += 1
+                i_pos += 1
+            
         if line_split[0] == 'DP':
-            vetor_rev.append(line_split)
+            for value in line_split:
+                if re.match(r'^-?\d+(?:\.\d+)$', value) is None:
+                    aux_list.append(value)
+                else:
+                    aux_list.append(float(value))
+
+            vetor_rev.append(aux_list)
     
     df = pd.DataFrame(vetor_rev, columns=headers)
     return df
@@ -121,6 +136,47 @@ def convert_to_text(df_raw):
     full_text = full_text + "&" + '\n'
     return full_text
 
+def add_value_carga(df_raw_original, ip, delta, regions):
+    """
+    Permite a alteração dos valores de carga no DataFrame escolhendo o subsistema, semanas a frente e o valor delta a ser adicionado
+
+    :param DataFrame df_raw_original: Recebe o data_frame contendo os dados de carga
+    :param int ip: Recebe o valor IP que indica o numero de semanas a frente
+    :param float delta: Valor em MW a ser somado na carga. Para subtrair basta escolher um sinal negativo
+    :param list/str regions: Lista contendo os subsistemas que se deseja modificar, a qual pode conter as seguintes strings -> 'S', 'SE', 'NE', 'NE'. Caso o parâmetro tenha recebido
+    apenas uma string, fora de uma lista, o código irá entender que se deseja modificar apenas um subistema
+    :return DataFrame df_raw: Retorna o DataFrame modificado
+    """
+    if type(regions).__name__ == 'str':
+        regions = [regions]
+    dict_region = {
+        'SE': '1',
+        'S': '2',
+        'NE': '3',
+        'N': '4',
+    }
+    df_raw = df_raw_original.copy()
+    for region in regions:
+        df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed1'] = df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed1'] + delta
+        df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed2'] = df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed2'] + delta
+        df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed3'] = df_raw.loc[(df_raw['IP'] == str(ip)) & (df_raw['S'] == dict_region[region]), 'MWmed3'] + delta
+    return df_raw
+
+def prepare_next_weeks(df_raw, weeks_ahead):
+    """
+    A fim de preparar o deck para as próximas semanas, essa função remove as semanas que já terão passado.
+
+    :param DataFrame df_raw: Recebe o data_frame contendo os dados de carga.
+    :return int weeks_ahead: Recebe o número de semanas no futuro em que se deseja deixar o deck formatado.
+    """
+    weeks_list = list(df_raw['IP'].unique())
+    del weeks_list[:weeks_ahead]
+    df_new = df_raw.loc[df_raw['IP'].isin(weeks_list)].copy()
+    new_ip = list(range(1,len(weeks_list) + 1))
+    new_ip = list(map(str, new_ip))
+    replace_dict = dict(zip(weeks_list, new_ip))    
+    df_new.loc[:,'IP'].replace(replace_dict, inplace = True)
+    return df_new
 
 
 if __name__ == '__main__':
@@ -129,5 +185,7 @@ if __name__ == '__main__':
     dadger = "DADGER.RV3"
     arquivo = extrair_carga_dadger(dadger, 'carga')
     x = carga_to_df(arquivo)
-    z = convert_to_text(x)
+    y = add_value_carga(x, 4, 20000, 'SE')
+    w = prepare_next_weeks(y,3)
+    z = convert_to_text(w)
     print(z)
