@@ -20,6 +20,10 @@ def carga_to_df(texto):
     gravando_rev = False
     for line in texto: 
         line_split = line.split()
+        if len(line_split) == 7:
+            line_split.insert(4, '')
+            line_split.insert(6, '')
+            line_split.insert(8, '')
         aux_list = []
         if 'MWmed' in line_split:
             headers = line_split.copy()
@@ -94,6 +98,8 @@ def convert_to_text(df_raw):
             value_string = str(float(value))
         else:
             value_string = str(value)
+        if value_string == 'nan':
+            value_string = ''
         string = generate_string(string_size)
         string2list = list(string)
         if from_direction == 'Right':
@@ -179,13 +185,30 @@ def prepare_next_weeks(df_raw, weeks_ahead):
     return df_new
 
 
+
+def insert_in_deck(arquivo_original, arquivo_copia, bloco):
+    extraido_original = extrair_carga_dadger(arquivo_original, 'carga')[7:]
+    extraido_string =""
+    for item in extraido_original:
+        extraido_string = extraido_string + item 
+
+    with open(dadger, 'r') as file:
+        file_data = file.read()   
+    file_data = file_data.replace(extraido_string, z)
+    with open(dadger_copia, 'w+') as file:
+        file.write(file_data)   
+
 if __name__ == '__main__':
     #nome_arquivo = 'CargaDecomp_PMO_Outubro21(Rev 3).txt'
     #arquivo = read_file(nome_arquivo)
     dadger = "DADGER.RV3"
+    dadger_copia = "copia_DADGER.RV3"
     arquivo = extrair_carga_dadger(dadger, 'carga')
     x = carga_to_df(arquivo)
-    y = add_value_carga(x, 4, 20000, 'SE')
+    y = add_value_carga(x, 4, 80000, 'SE')
     w = prepare_next_weeks(y,3)
     z = convert_to_text(w)
-    print(z)
+    u = insert_in_deck(dadger_copia, z, 'carga')
+    insert_in_deck(dadger, dadger_copia, 'carga')
+    print(x)
+    # print(z)
