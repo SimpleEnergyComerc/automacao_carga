@@ -45,6 +45,7 @@ def carga_to_df(texto):
             vetor_rev.append(aux_list)
     
     df = pd.DataFrame(vetor_rev, columns=headers)
+    
     return df
 
 def extrair_carga_dadger(arquivo, bloco):
@@ -186,17 +187,67 @@ def prepare_next_weeks(df_raw, weeks_ahead):
 
 
 
-def insert_in_deck(arquivo_original, arquivo_copia, bloco):
+def insert_in_deck(arquivo_original, arquivo_copia, texto, bloco):
+    """
+    Insere no deck o dataframe alterado
+
+    :param str arquivo_original: Recebe o nome do arquivo original
+    :return str arquivo_copia: Recebe o nome do arquivo que se deseja escrever o deck alterado
+    """
     extraido_original = extrair_carga_dadger(arquivo_original, 'carga')[7:]
     extraido_string =""
     for item in extraido_original:
         extraido_string = extraido_string + item 
 
-    with open(dadger, 'r') as file:
+    with open(arquivo_original, 'r') as file:
         file_data = file.read()   
-    file_data = file_data.replace(extraido_string, z)
-    with open(dadger_copia, 'w+') as file:
+    file_data = file_data.replace(extraido_string, texto)
+    with open(arquivo_copia, 'w+') as file:
         file.write(file_data)   
+
+
+def reservatorio_to_df(texto):
+    vetor_rev = []
+    nome_sub_bacia = None
+    for line in texto:
+        if "------------" in line:
+            continue
+        line_split = line.split()
+        headers = ['UHE', 'REE', 'ID_SUB_BACIA', 'NIVEL', 'FATOR' ,'CODIGO_EMPRESA', 'EMPRESA','NOME_SUB_BACIA']
+        aux_list = []
+        if '&*' in line_split[0]:
+            codigo_empresa = line_split[1]
+            empresa = line_split[2]
+        if ('&' in line_split[0]) and ('*' not in line_split[0]):
+            nome_sub_bacia = line[1:]
+        
+        if (nome_sub_bacia != None) and (len(line_split) > 1) and (line_split[0] == 'UH'):
+            counter = 0
+            for value in line_split:
+                if counter < 5:
+                    if re.match(r'^-?\d+(?:\.\d+)$', value) is None:
+                        aux_list.append(value)
+                    else:
+                        aux_list.append(float(value))
+                counter += 1
+            aux_list.append(codigo_empresa)
+            aux_list.append(empresa)
+            aux_list.append(nome_sub_bacia)
+                
+            vetor_rev.append(aux_list)
+
+
+    df = pd.DataFrame(vetor_rev, columns=headers)
+    return df
+
+def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
+    df_raw = df_raw_original.copy()
+    if type(id_sub_bacias).__name__ == 'int':
+        id_sub_bacias = [id_sub_bacias]
+    for id_sub_bacia in id_sub_bacias:
+        df_raw.loc[df_raw['ID_SUB_BACIA'] == str(id_sub_bacia), 'NIVEL'] = df_raw.loc[df_raw['ID_SUB_BACIA'] == str(id_sub_bacia), 'NIVEL'] + delta
+    
+    return df_raw
 
 if __name__ == '__main__':
     #nome_arquivo = 'CargaDecomp_PMO_Outubro21(Rev 3).txt'
@@ -208,7 +259,10 @@ if __name__ == '__main__':
     y = add_value_carga(x, 4, 80000, 'SE')
     w = prepare_next_weeks(y,3)
     z = convert_to_text(w)
-    u = insert_in_deck(dadger_copia, z, 'carga')
-    insert_in_deck(dadger, dadger_copia, 'carga')
-    print(x)
+    u = insert_in_deck(dadger,dadger_copia, z, 'carga')
+    #insert_in_deck(dadger, dadger_copia, 'carga')
+    arquivo = extrair_carga_dadger(dadger, 'reservatorio')
+    df = reservatorio_to_df(arquivo)
+    df_mod = modificar_dados_reservatório(df, 1000, [10,7])
+    print(df_mod)
     # print(z)
