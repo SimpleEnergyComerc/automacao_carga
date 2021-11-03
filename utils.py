@@ -210,7 +210,7 @@ def reservatorio_to_df(texto):
     vetor_rev = []
     nome_sub_bacia = None
     for line in texto:
-        if "------------" in line:
+        if ("------------" in line) or ('........' in line):
             continue
         line_split = line.split()
         headers = ['UHE', 'REE', 'ID_SUB_BACIA', 'NIVEL', 'FATOR' ,'CODIGO_EMPRESA', 'EMPRESA','NOME_SUB_BACIA']
@@ -249,6 +249,67 @@ def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
     
     return df_raw
 
+def convert_to_text_reservatorio(df_raw):
+    """
+    Converte um data frame de cargas no formato txt para ser inserido posteiormente no deck.
+
+    :param DataFrame df_raw: Recebe o data_frame contendo os dados de carga
+    :return str full_text: Retorna o DataFrame convertido em string no formato do DADGER/Deck do DECOMP
+    """
+    def generate_string(tamanho):
+        string = " "
+        string = string*tamanho
+        return string
+    
+    def insert_string(string_size, value, from_direction='Right'):
+        if type(value).__name__ == 'int':
+            value_string = str(float(value))
+        else:
+            value_string = str(value)
+        if value_string == 'nan':
+            value_string = ''
+        string = generate_string(string_size)
+        string2list = list(string)
+        if from_direction == 'Right':
+            for i in reversed(range(0,len(value_string))):
+                string2list[i] = value_string[-i -1]
+            return "".join(string2list[::-1])
+        elif from_direction == 'Left':
+            for i in range(0,len(value_string)):
+                string2list[i] = value_string[i]
+            return "".join(string2list)
+
+    full_text = ""
+    previous_empresa = 0
+    current_empresa = 0
+    moldura = '&.................................'
+    for i, row in df_raw.iterrows():
+        current_empresa = row['EMPRESA']
+        
+        if current_empresa != previous_empresa:
+            full_text = full_text + moldura + '\n'
+            full_text = full_text + insert_string(3, '&*', 'Left')
+            full_text = full_text + insert_string(11, row['CODIGO_EMPRESA'], 'Left')
+            full_text = full_text + insert_string(22, row['EMPRESA'], 'Left')
+            full_text = full_text + '\n'
+            full_text = full_text + moldura + '\n'
+
+        full_text = full_text + '&' + row['NOME_SUB_BACIA']
+
+        full_text = full_text + insert_string(2, row['UHE'], 'Left') 
+        full_text = full_text + insert_string(5, row['REE'], 'Right')
+        full_text = full_text + insert_string(4, row['ID_SUB_BACIA'], 'Right') 
+        full_text = full_text + insert_string(13, row['NIVEL'], 'Right') 
+        full_text = full_text + insert_string(16, row['FATOR'], 'Right') + '\n'
+
+
+        previous_empresa = row['EMPRESA']
+
+        with open('teste.txt', 'w') as file:
+            file.write(full_text)
+        
+    return full_text
+
 if __name__ == '__main__':
     #nome_arquivo = 'CargaDecomp_PMO_Outubro21(Rev 3).txt'
     #arquivo = read_file(nome_arquivo)
@@ -264,5 +325,6 @@ if __name__ == '__main__':
     arquivo = extrair_carga_dadger(dadger, 'reservatorio')
     df = reservatorio_to_df(arquivo)
     df_mod = modificar_dados_reservatório(df, 1000, [10,7])
-    print(df_mod)
+    text = convert_to_text_reservatorio(df_mod)
+    print(text)
     # print(z)
