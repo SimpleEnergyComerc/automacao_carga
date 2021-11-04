@@ -251,6 +251,13 @@ def insert_in_deck(arquivo_original, arquivo_copia, texto, bloco):
     return
 
 def reservatorio_to_df(texto):
+    """
+    recebe o texto contendo as informações de reservatório que forame extraídas do dadger
+
+    :param str texto: String contendo dados de carga no formato do DADGER/DECK
+    :return: Data Frame convertido a partir da string recebida
+    """
+    
     vetor_rev = []
     nome_sub_bacia = None
     for line in texto:
@@ -285,6 +292,15 @@ def reservatorio_to_df(texto):
     return df
 
 def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
+    """
+    Função que altera os níveis de reservatorio
+
+    :param DataFrame df_raw_original: DataFrame que foi obtido através da leitura do dadger
+    :param float delta: Valor a ser adicionado
+    :param list id_sub_bacias: Lista contendo todas as sub_bacias que se deseja alterar
+
+    :return: DataFrame modificado 
+    """
     df_raw = df_raw_original.copy()
     if type(id_sub_bacias).__name__ == 'int':
         id_sub_bacias = [id_sub_bacias]
@@ -294,6 +310,9 @@ def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
     return df_raw
 
 def preparar_proximo_mes(df_raw, mes, ano):
+    """
+    Pega o último valor da semana e replica para todos os outros com base no numero de revs no próximo mes
+    """
     calendario = SINcalendar()
     numero_revs = calendario._numero_revs(mes,ano)
     max_rev_value = max(df_raw['IP'].values)
