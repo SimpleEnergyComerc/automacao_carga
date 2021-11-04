@@ -82,7 +82,7 @@ def extrair_carga_dadger(arquivo, bloco):
 
 
 
-def convert_to_text(df_raw):
+def convert_to_text(df_raw, bloco = 'carga'):
     """
     Converte um data frame de cargas no formato txt para ser inserido posteiormente no deck.
 
@@ -115,33 +115,65 @@ def convert_to_text(df_raw):
     full_text = ""
     previous_ip = 0
     current_ip = 0
-    for i, row in df_raw.iterrows():
-        current_ip = int(row['IP'])
-
-        if i == 0:
+    if bloco == 'carga':
+        for i, row in df_raw.iterrows():
             current_ip = int(row['IP'])
+
+            if i == 0:
+                current_ip = int(row['IP'])
+                previous_ip = int(row['IP'])
+            if previous_ip != current_ip:
+                full_text = full_text + "&" + '\n'
+
+            dp = insert_string(5, row.values[0], from_direction='Left')
+            ip = insert_string(5, row.values[1], from_direction='Left')
+            s = insert_string(4, row.values[2], from_direction='Left')
+            pat = insert_string(5, row.values[3], from_direction='Left')
+            mwmed1 = insert_string(10, row.values[4], from_direction='Right')
+            pat1 = insert_string(10, row.values[5], from_direction='Right')
+            mwmed2 = insert_string(10, row.values[6], from_direction='Right')
+            pat2 = insert_string(10, row.values[7], from_direction='Right')
+            mwmed3 = insert_string(10, row.values[8], from_direction='Right')
+            pat3 = insert_string(10, row.values[9], from_direction='Right')
+            if len(str(row.values[2])) > 1:
+                ip = insert_string(4, row.values[1], from_direction='Left')
+                s = insert_string(5, row.values[2], from_direction='Left')
+            full_text = full_text + dp + ip + s + pat + mwmed1 + pat1 + mwmed2 + pat2 + mwmed3 + pat3 + '\n'
             previous_ip = int(row['IP'])
-        if previous_ip != current_ip:
-            full_text = full_text + "&" + '\n'
 
-        dp = insert_string(5, row.values[0], from_direction='Left')
-        ip = insert_string(5, row.values[1], from_direction='Left')
-        s = insert_string(4, row.values[2], from_direction='Left')
-        pat = insert_string(5, row.values[3], from_direction='Left')
-        mwmed1 = insert_string(10, row.values[4], from_direction='Right')
-        pat1 = insert_string(10, row.values[5], from_direction='Right')
-        mwmed2 = insert_string(10, row.values[6], from_direction='Right')
-        pat2 = insert_string(10, row.values[7], from_direction='Right')
-        mwmed3 = insert_string(10, row.values[8], from_direction='Right')
-        pat3 = insert_string(10, row.values[9], from_direction='Right')
-        if len(str(row.values[2])) > 1:
-            ip = insert_string(4, row.values[1], from_direction='Left')
-            s = insert_string(5, row.values[2], from_direction='Left')
-        full_text = full_text + dp + ip + s + pat + mwmed1 + pat1 + mwmed2 + pat2 + mwmed3 + pat3 + '\n'
-        previous_ip = int(row['IP'])
+        full_text = full_text + "&" + '\n'
+        return full_text
+    elif bloco == 'reservatorio':
+        full_text = ""
+        previous_empresa = 0
+        current_empresa = 0
+        moldura = '&.................................'
+        for i, row in df_raw.iterrows():
+            current_empresa = row['EMPRESA']
+            
+            if current_empresa != previous_empresa:
+                full_text = full_text + moldura + '\n'
+                full_text = full_text + insert_string(3, '&*', 'Left')
+                full_text = full_text + insert_string(11, row['CODIGO_EMPRESA'], 'Left')
+                full_text = full_text + insert_string(22, row['EMPRESA'], 'Left')
+                full_text = full_text + '\n'
+                full_text = full_text + moldura + '\n'
 
-    full_text = full_text + "&" + '\n'
+            full_text = full_text + '&' + row['NOME_SUB_BACIA']
+
+            full_text = full_text + insert_string(2, row['UHE'], 'Left') 
+            full_text = full_text + insert_string(5, row['REE'], 'Right')
+            full_text = full_text + insert_string(4, row['ID_SUB_BACIA'], 'Right') 
+            full_text = full_text + insert_string(13, row['NIVEL'], 'Right') 
+            full_text = full_text + insert_string(16, row['FATOR'], 'Right') 
+            if 'BELO MONTE' in row['NOME_SUB_BACIA']:
+                full_text = full_text + insert_string(29, str(0), 'Right')
+            full_text = full_text + '\n'
+
+            previous_empresa = row['EMPRESA']
     return full_text
+
+
 
 def add_value_carga(df_raw_original, ip, delta, regions):
     """
@@ -258,64 +290,7 @@ def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
     
     return df_raw
 
-def convert_to_text_reservatorio(df_raw):
-    """
-    Converte um data frame de cargas no formato txt para ser inserido posteiormente no deck.
 
-    :param DataFrame df_raw: Recebe o data_frame contendo os dados de carga
-    :return str full_text: Retorna o DataFrame convertido em string no formato do DADGER/Deck do DECOMP
-    """
-    def generate_string(tamanho):
-        string = " "
-        string = string*tamanho
-        return string
-    
-    def insert_string(string_size, value, from_direction='Right'):
-        if type(value).__name__ == 'int':
-            value_string = str(float(value))
-        else:
-            value_string = str(value)
-        if value_string == 'nan':
-            value_string = ''
-        string = generate_string(string_size)
-        string2list = list(string)
-        if from_direction == 'Right':
-            for i in reversed(range(0,len(value_string))):
-                string2list[i] = value_string[-i -1]
-            return "".join(string2list[::-1])
-        elif from_direction == 'Left':
-            for i in range(0,len(value_string)):
-                string2list[i] = value_string[i]
-            return "".join(string2list)
-
-    full_text = ""
-    previous_empresa = 0
-    current_empresa = 0
-    moldura = '&.................................'
-    for i, row in df_raw.iterrows():
-        current_empresa = row['EMPRESA']
-        
-        if current_empresa != previous_empresa:
-            full_text = full_text + moldura + '\n'
-            full_text = full_text + insert_string(3, '&*', 'Left')
-            full_text = full_text + insert_string(11, row['CODIGO_EMPRESA'], 'Left')
-            full_text = full_text + insert_string(22, row['EMPRESA'], 'Left')
-            full_text = full_text + '\n'
-            full_text = full_text + moldura + '\n'
-
-        full_text = full_text + '&' + row['NOME_SUB_BACIA']
-
-        full_text = full_text + insert_string(2, row['UHE'], 'Left') 
-        full_text = full_text + insert_string(5, row['REE'], 'Right')
-        full_text = full_text + insert_string(4, row['ID_SUB_BACIA'], 'Right') 
-        full_text = full_text + insert_string(13, row['NIVEL'], 'Right') 
-        full_text = full_text + insert_string(16, row['FATOR'], 'Right') 
-        if 'BELO MONTE' in row['NOME_SUB_BACIA']:
-            full_text = full_text + insert_string(29, str(0), 'Right')
-        full_text = full_text + '\n'
-
-        previous_empresa = row['EMPRESA']
-    return full_text
 
 if __name__ == '__main__':
     #nome_arquivo = 'CargaDecomp_PMO_Outubro21(Rev 3).txt'
@@ -326,12 +301,12 @@ if __name__ == '__main__':
     x = carga_to_df(arquivo)
     y = add_value_carga(x, 4, 80000, 'SE')
     w = prepare_next_weeks(y,3)
-    z = convert_to_text(w)
+    z = convert_to_text(w, 'carga')
     u = insert_in_deck(dadger,dadger_copia, z, 'carga')
     #insert_in_deck(dadger, dadger_copia, 'carga')
     arquivo = extrair_carga_dadger(dadger, 'reservatorio')
     df = reservatorio_to_df(arquivo)
-    df_mod = modificar_dados_reservatório(df, 1000, [10,7])
-    text = convert_to_text_reservatorio(df_mod)
+    df_mod = modificar_dados_reservatório(df, 5000, [10,7])
+    text = convert_to_text(df_mod, 'reservatorio')
     u = insert_in_deck(dadger,dadger_copia, text, 'reservatorio')
     # print(z)
