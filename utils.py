@@ -1,5 +1,8 @@
+import calendar
+from os import replace
 import pandas as pd
 import re 
+from rev_calendar import SINcalendar
 
 def read_file(arquivo):
     with open(arquivo, 'r') as file:
@@ -240,12 +243,12 @@ def insert_in_deck(arquivo_original, arquivo_copia, texto, bloco):
 
     with open(arquivo_original, 'r') as file:
         file_data = file.read()   
-    print(texto in file_data)
     file_data = file_data.replace(extraido_string, texto)
     with open(arquivo_copia, 'w+') as file:
         file.write(file_data)
     with open('teste.txt', 'w+') as file:
         file.write(file_data + texto)
+    return
 
 def reservatorio_to_df(texto):
     vetor_rev = []
@@ -290,6 +293,27 @@ def modificar_dados_reservatório(df_raw_original, delta, id_sub_bacias):
     
     return df_raw
 
+def preparar_proximo_mes(df_raw, mes, ano):
+    calendario = SINcalendar()
+    numero_revs = calendario._numero_revs(mes,ano)
+    max_rev_value = max(df_raw['IP'].values)
+    df_filtered = df_raw.loc[df_raw['IP'] == max_rev_value].copy()
+
+    def create_ip_column(rev):
+        dados = {'IP' : [rev]*5}
+        df = pd.DataFrame(dados)
+        return df
+
+    df_processed = pd.DataFrame()
+    for i in range (1, numero_revs + 2):
+        replacement = create_ip_column(i)
+        df_filtered['IP'] = replacement['IP'].values
+
+        df_processed = df_processed.append(df_filtered)
+
+    return df_processed
+    
+
 
 
 if __name__ == '__main__':
@@ -309,4 +333,5 @@ if __name__ == '__main__':
     df_mod = modificar_dados_reservatório(df, 5000, [10,7])
     text = convert_to_text(df_mod, 'reservatorio')
     u = insert_in_deck(dadger,dadger_copia, text, 'reservatorio')
+    preparar_proximo_mes(x, 11, 2021)
     # print(z)
