@@ -194,17 +194,26 @@ def insert_in_deck(arquivo_original, arquivo_copia, texto, bloco):
     :param str arquivo_original: Recebe o nome do arquivo original
     :return str arquivo_copia: Recebe o nome do arquivo que se deseja escrever o deck alterado
     """
-    extraido_original = extrair_carga_dadger(arquivo_original, 'carga')[7:]
+    if bloco == 'carga':
+        extraido_original = extrair_carga_dadger(arquivo_original, 'carga')[7:]
+    if bloco == 'reservatorio':
+        extraido_original = extrair_carga_dadger(arquivo_original, 'reservatorio')[5:]
+
     extraido_string =""
     for item in extraido_original:
         extraido_string = extraido_string + item 
 
+    with open('teste.txt', 'w') as file:
+        file.write(extraido_string)
+
     with open(arquivo_original, 'r') as file:
         file_data = file.read()   
+    print(texto in file_data)
     file_data = file_data.replace(extraido_string, texto)
     with open(arquivo_copia, 'w+') as file:
-        file.write(file_data)   
-
+        file.write(file_data)
+    with open('teste.txt', 'w+') as file:
+        file.write(file_data + texto)
 
 def reservatorio_to_df(texto):
     vetor_rev = []
@@ -300,14 +309,12 @@ def convert_to_text_reservatorio(df_raw):
         full_text = full_text + insert_string(5, row['REE'], 'Right')
         full_text = full_text + insert_string(4, row['ID_SUB_BACIA'], 'Right') 
         full_text = full_text + insert_string(13, row['NIVEL'], 'Right') 
-        full_text = full_text + insert_string(16, row['FATOR'], 'Right') + '\n'
-
+        full_text = full_text + insert_string(16, row['FATOR'], 'Right') 
+        if 'BELO MONTE' in row['NOME_SUB_BACIA']:
+            full_text = full_text + insert_string(29, str(0), 'Right')
+        full_text = full_text + '\n'
 
         previous_empresa = row['EMPRESA']
-
-        with open('teste.txt', 'w') as file:
-            file.write(full_text)
-        
     return full_text
 
 if __name__ == '__main__':
@@ -326,5 +333,5 @@ if __name__ == '__main__':
     df = reservatorio_to_df(arquivo)
     df_mod = modificar_dados_reservatório(df, 1000, [10,7])
     text = convert_to_text_reservatorio(df_mod)
-    print(text)
+    u = insert_in_deck(dadger,dadger_copia, text, 'reservatorio')
     # print(z)
